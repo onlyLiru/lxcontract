@@ -15,7 +15,7 @@ contract LXDAOAnniversaryToken is ERC721AQueryable, AccessControl {
         "https://lxdao.io/metadata/LXDAO2ndAnniversaryNFT.json";
     uint256 public remainingMintAmount = 500;
     uint256 public remainingAirdropAmount = 100;
-    uint256 public constant price = 0 ether;
+    uint256 public constant price = 0.01 ether;
 
     event MetadataURIChanged(
         address operator,
@@ -46,7 +46,6 @@ contract LXDAOAnniversaryToken is ERC721AQueryable, AccessControl {
         require(amount <= remainingMintAmount, "Exceeded mint amount.");
         require(amount > 0, "The amount must greater than 0.");
 
-        // todo 需要确认下是否需要免费，或者加限制
         uint256 pay = price * amount;
         require(msg.value >= pay, "Insufficient payment.");
 
