@@ -11,23 +11,16 @@ contract LXDAOAnniversaryToken is ERC721AQueryable, AccessControl {
 
     using Strings for uint256;
 
-    string public baseURI;
     string public metadataURI =
-        "https://lxdao.io/metadata/LXDAO2stAnniversaryNFT.json";
+        "https://lxdao.io/metadata/LXDAO2ndAnniversaryNFT.json";
     uint256 public remainingMintAmount = 500;
     uint256 public remainingAirdropAmount = 100;
     uint256 public constant price = 0 ether;
 
-    event BaseURIChanged(
+    event MetadataURIChanged(
         address operator,
-        string fromBaseURI,
-        string toBaseURI
-    );
-
-    event MetaURIChanged(
-        address operator,
-        string fromMetaURI,
-        string toMetaURI
+        string fromMetadataURI,
+        string toMetadataURI
     );
 
     event Withdraw(address from, address to, uint256 amount);
@@ -49,30 +42,16 @@ contract LXDAOAnniversaryToken is ERC721AQueryable, AccessControl {
         return super.supportsInterface(interfaceId);
     }
 
-    function safeTransferETH(address to, uint256 value) internal {
-        (bool success, ) = to.call{value: value}(new bytes(0));
-        require(
-            success,
-            "TransferHelper::safeTransferETH: ETH transfer failed"
-        );
-    }
-
     function mint(uint256 amount) external payable {
         require(amount <= remainingMintAmount, "Exceeded mint amount.");
-        require(amount > 0, "the amount must greater then 0.");
+        require(amount > 0, "The amount must greater than 0.");
 
+        // todo 需要确认下是否需要免费，或者加限制
         uint256 pay = price * amount;
-
         require(msg.value >= pay, "Insufficient payment.");
 
         remainingMintAmount = remainingMintAmount - amount;
-
         _safeMint(msg.sender, amount);
-
-        // refund dust eth, if any
-        if (msg.value > pay) {
-            safeTransferETH(msg.sender, msg.value - pay);
-        }
     }
 
     function airdrop(
@@ -81,7 +60,7 @@ contract LXDAOAnniversaryToken is ERC721AQueryable, AccessControl {
     ) external onlyRole(OPERATION_ROLE) {
         require(
             receivers.length == amounts.length,
-            "the length of accounts is not equal to amounts"
+            "The length of accounts is not equal to amounts"
         );
 
         uint256 total = 0;
@@ -90,11 +69,10 @@ contract LXDAOAnniversaryToken is ERC721AQueryable, AccessControl {
         }
         require(remainingAirdropAmount >= total, "Exceeded airdrop amount.");
 
+        remainingAirdropAmount = remainingAirdropAmount - total;
         for (uint256 i = 0; i < receivers.length; i++) {
             _safeMint(receivers[i], uint96(amounts[i]));
         }
-
-        remainingAirdropAmount = remainingAirdropAmount - total;
     }
 
     function releaseAirdrop() external onlyRole(OPERATION_ROLE) {
@@ -102,25 +80,22 @@ contract LXDAOAnniversaryToken is ERC721AQueryable, AccessControl {
         remainingAirdropAmount = 0;
     }
 
-    function updateMetaURI(
-        string calldata _newMetaURI
+    function updateMetadataURI(
+        string calldata _newMetadataURI
     ) external onlyRole(OPERATION_ROLE) {
-        emit MetaURIChanged(msg.sender, metadataURI, _newMetaURI);
-        metadataURI = _newMetaURI;
+        emit MetadataURIChanged(msg.sender, metadataURI, _newMetadataURI);
+        metadataURI = _newMetadataURI;
     }
 
-    function withdrawToken(
-        address to,
+    function withdraw(
+        address payable to,
         uint256 amount
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         require(to != address(0), "ZERO_ADDRESS");
         require(amount > 0, "Invalid input amount.");
 
-        // transfer
         (bool success, ) = to.call{value: amount}("");
-        if (!success) {
-            revert CallFailed();
-        }
+        require(success, "Failed to withdraw.");
         emit Withdraw(_msgSender(), to, amount);
     }
 
